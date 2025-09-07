@@ -30,12 +30,12 @@ export type Position = {
 }
 
 //position-open
-const openPositions:Record<string,Position>={};
-
 const balance:Record<string,number>={
     "USD":10000,
     "SOL":0
 }
+const openPositions:Record<string,Position>={};
+
 
 
 
@@ -77,7 +77,18 @@ export const calculateUnrealizedPnL = (
     return 0;
 };
 
+export const checkForLiquidations = () =>{
+    const allOpenPositions = Object.values(openPosition);
+    for(const position of allOpenPositions){
+        if(position.unrealizedPnL <= -position.margin){
+            console.log(`[Engine] LIQUIDATING position ${position.positionId} due to excessive losses`);
 
+            const liquidationPrice = position.entryPrice + ( position.unrealizedPnL / position.quantity);
+
+            closePosition(position.positionId, liquidationPrice);
+        }
+    }
+}
 export const openPosition = ({
     margin,
     asset,
@@ -126,7 +137,24 @@ export const openPosition = ({
     console.log("[Engine] opened New Position", newPosition);
     return newPosition;
 };
+ export const closePosition = (positionId:string, currentPrice:number)=>{
+    const position = openPositions[positionId];
+    if(!position){
+        throw new Error("Position not found");
+    }
 
+    const realizedPnL = calculateUnrealizedPnL(position.type, position.quantity,position.entryPrice, currentPrice);
+
+    const amoutToReturn = position.margin + realizedPnL;
+    const currentUSDBalance = getBalance("USD");
+    updateBalance("USD", currentUSDBalance + amoutToReturn);
+
+    delete openPositions[positionId];
+    console.log(`[Engine] close position ${positionId} . PNL $${realizedPnL.toFixed(2)}`);
+  
+    return { message:"Position closed successfully", realizedPnL};
+
+ }
 
 export const getOpenPositions = ():Position[]=>{
     return Object.values(openPosition);

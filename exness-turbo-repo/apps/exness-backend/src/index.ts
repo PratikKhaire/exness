@@ -1,6 +1,6 @@
 import express from "express";
 import { connectProduct } from "./services/kafka.producer";
-
+import { closePosition } from "./engine/store";
 import { connectToBackpackStream } from "./services/websocket.client";
 import { connectConsumer } from "./engine/consumer";
 import { getBalance, getOpenPositions } from "./engine/store";
@@ -48,7 +48,27 @@ app.get('/api/v1/state', (req,res)=>{
   }
   res.json(currentState);
 })
+ // position close 
 
+ app.post('/api/v1/positions/close', (req , res)=>{
+  console.log('[API] request received to closed a position', req.body);
+
+  try{
+    const { positionId, currentPrice } = req.body;
+    if(!positionId || !currentPrice){
+      return res.status(400).json({message:'positionId and currentPrice are required'});
+    }
+
+    const result = closePosition(positionId, parseFloat(currentPrice));
+    res.status(200).json(result);
+  }catch(error){
+    if(error) {
+      res.status(400).json({
+        message:"failed to close", error: (error as Error).message
+      });
+    }
+  }
+ });
 
 app.listen(PORT, () => {
   console.log(`Express server started at the ${PORT}`);

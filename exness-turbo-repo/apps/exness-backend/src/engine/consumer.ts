@@ -1,4 +1,7 @@
 import { Kafka } from "kafkajs";
+
+
+import { getOpenOrders, calculateUnrealizedPnL, checkForLiquidations, getOpenPositions } from "./store";
 const kafka = new Kafka({
   clientId: "trading-app-engine",
   brokers: ["localhost:9092"],
@@ -19,8 +22,27 @@ export const connectConsumer = async () => {
         }
         const messageValueString = message.value.toString();
 
-        const payload = JSON.parse(messageValueString);
+        const payload = JSON.parse(message.value.toString());
 
+
+        const openPosition = getOpenPositions();
+        for (const position of openPosition) {
+          const currentPrice = payload.currentPrice;
+          const newPnL = calculateUnrealizedPnL(
+            position.type,
+            position.quantity,
+            position.entryPrice,
+            currentPrice
+          );
+          console.log(
+            `[Engine] PnL Update for ${position.positionId
+            }: $${newPnL.toFixed(2)}`
+          );
+          updatePositionPnL(position.positionId, newPnL);
+
+
+
+        }
         console.log("[Engine] received new market data", payload);
       },
     });
@@ -29,3 +51,7 @@ export const connectConsumer = async () => {
     process.exit(1);
   }
 };
+function updatePositionPnL(positionId: string, newPnL: number) {
+  throw new Error("Function not implemented.");
+}
+
