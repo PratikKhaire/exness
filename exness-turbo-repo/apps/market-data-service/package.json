@@ -1,0 +1,25 @@
+{
+  "name": "market-data-service",
+  "version": "1.0.0",
+  "description": "Market data collection service",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ws": "^8.18.3",
+    "dotenv": "^16.4.5",
+    "@repo/kafka-utils": "*",
+    "@repo/shared-types": "*"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "@types/node": "^20.14.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5",
+    "@repo/typescript-config": "*"
+  }
+}
