@@ -78,7 +78,7 @@ export const calculateUnrealizedPnL = (
 };
 
 export const checkForLiquidations = () =>{
-    const allOpenPositions = Object.values(openPosition);
+    const allOpenPositions = Object.values(openPositions);
     for(const position of allOpenPositions){
         if(position.unrealizedPnL <= -position.margin){
             console.log(`[Engine] LIQUIDATING position ${position.positionId} due to excessive losses`);
@@ -157,5 +157,13 @@ export const openPosition = ({
  }
 
 export const getOpenPositions = ():Position[]=>{
-    return Object.values(openPosition);
+    return Object.values(openPositions);
+}
+
+export const updatePositionPnL = (positionId: string, newPnL: number): void => {
+    const position = openPositions[positionId];
+    if (position) {
+        position.unrealizedPnL = newPnL;
+        console.log(`[Store] Updated PnL for position ${positionId}: $${newPnL.toFixed(2)}`);
+    }
 }

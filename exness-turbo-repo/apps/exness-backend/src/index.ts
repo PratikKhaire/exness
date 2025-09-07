@@ -23,7 +23,7 @@ startKafka().catch((error) => {
   process.exit(1);
 });
 const app = express();
-const PORT = 4000;
+const PORT = 5000;
 
 app.use(express.json());
 
@@ -73,6 +73,3 @@ app.get('/api/v1/state', (req,res)=>{
 app.listen(PORT, () => {
   console.log(`Express server started at the ${PORT}`);
 });
-
-// function express() {
-//   throw new Error("Function not implemented.");
