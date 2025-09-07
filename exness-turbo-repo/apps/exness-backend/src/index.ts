@@ -22,7 +22,6 @@ startKafka().catch((error) => {
   console.log("A error in the startKafka", error);
   process.exit(1);
 });
-99629100000
 const app = express();
 const PORT = 4000;
 
