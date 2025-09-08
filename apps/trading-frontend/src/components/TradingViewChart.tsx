@@ -34,6 +34,7 @@ export function TradingViewChart({ symbol, className = '' }: TradingViewChartPro
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const [isPriceUpdating, setIsPriceUpdating] = useState<boolean>(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>('1m');
+  const [isSimulationActive, setIsSimulationActive] = useState<boolean>(true);
 
   // Convert timeframe string to minutes
   const getTimeframeMinutes = (timeframe: string): number => {
@@ -51,10 +52,18 @@ export function TradingViewChart({ symbol, className = '' }: TradingViewChartPro
 
   // Handle timeframe change
   const handleTimeframeChange = (timeframe: string) => {
+    if (timeframe === selectedTimeframe) return; // Prevent unnecessary updates
+    
     setSelectedTimeframe(timeframe);
-    const minutes = getTimeframeMinutes(timeframe);
-    generateInitialData(minutes);
-    setLastUpdate(`Switched to ${timeframe}`);
+    
+    try {
+      const minutes = getTimeframeMinutes(timeframe);
+      generateInitialData(minutes);
+      setLastUpdate(`Switched to ${timeframe}`);
+    } catch (error) {
+      console.warn('Timeframe change error:', error);
+      setLastUpdate(`Error switching to ${timeframe}`);
+    }
   };
 
   // Store candlestick data in state
@@ -155,7 +164,11 @@ export function TradingViewChart({ symbol, className = '' }: TradingViewChartPro
     candlestickSeriesRef.current = candlestickSeries;
 
     // Generate initial historical data
-    generateInitialData();
+    try {
+      generateInitialData();
+    } catch (error) {
+      console.warn('Initial data generation error:', error);
+    }
 
     // Handle resize
     const handleResize = () => {
@@ -180,11 +193,14 @@ export function TradingViewChart({ symbol, className = '' }: TradingViewChartPro
   const generateInitialData = (timeframeMinutes: number = 1) => {
     const data: CandleData[] = [];
     const now = Math.floor(Date.now() / 1000);
+    
+    // Align current time to timeframe boundary
+    const alignedNow = Math.floor(now / (timeframeMinutes * 60)) * (timeframeMinutes * 60);
     let basePrice = 150.123456; // Starting price for SOL with more precision
     
     // Generate 200 candles based on selected timeframe
     for (let i = 199; i >= 0; i--) {
-      const time = (now - i * timeframeMinutes * 60) as UTCTimestamp;
+      const time = (alignedNow - i * timeframeMinutes * 60) as UTCTimestamp;
       
       // Create more realistic price movement
       const volatility = 0.005 * Math.sqrt(timeframeMinutes); // Higher volatility for longer timeframes
@@ -213,12 +229,19 @@ export function TradingViewChart({ symbol, className = '' }: TradingViewChartPro
       basePrice = close; // Use close as next open
     }
 
+    // Sort data by time to ensure proper ordering
+    data.sort((a, b) => a.time - b.time);
+
     setCandleData(data);
     if (candlestickSeriesRef.current) {
-      candlestickSeriesRef.current.setData(data);
+      try {
+        candlestickSeriesRef.current.setData(data);
+      } catch (error) {
+        console.warn('Chart setData error:', error);
+      }
     }
 
-    // Set initial current candle and volume
+    // Set initial current candle and volume (use the last candle)
     const lastCandle = data[data.length - 1];
     if (lastCandle) {
       setCurrentCandle(lastCandle);
@@ -298,84 +321,98 @@ export function TradingViewChart({ symbol, className = '' }: TradingViewChartPro
     // Reset the updating indicator after a short delay
     setTimeout(() => setIsPriceUpdating(false), 300);
     
-    const now = Math.floor(Date.now() / 1000);
-    const timeframeMinutes = getTimeframeMinutes(selectedTimeframe);
-    const currentTimeframe = Math.floor(now / (timeframeMinutes * 60)) * (timeframeMinutes * 60);
-
-    if (currentCandle && currentCandle.time === currentTimeframe) {
-      // Update existing candle
+    // Use functional update to get the latest currentCandle
+    setCurrentCandle(prevCandle => {
+      if (!prevCandle || !candlestickSeriesRef.current) {
+        return prevCandle;
+      }
+      
+      // Always update the existing candle during simulation
       const updatedCandle: CandleData = {
-        ...currentCandle,
+        ...prevCandle,
         close: newPrice,
-        high: Math.max(currentCandle.high, newPrice),
-        low: Math.min(currentCandle.low, newPrice),
+        high: Math.max(prevCandle.high, newPrice),
+        low: Math.min(prevCandle.low, newPrice),
       };
 
-      setCurrentCandle(updatedCandle);
-      
-      if (candlestickSeriesRef.current) {
+      try {
+        // Use update method for existing candle
         candlestickSeriesRef.current.update(updatedCandle);
+        
+        // Update price change based on previous candle
+        setPriceChange(newPrice - prevCandle.close);
+        
+      } catch (error) {
+        console.warn('Chart update error:', error);
+        // Don't regenerate data during simulation as it can cause issues
       }
-    } else {
-      // Create new candle
-      const newCandle: CandleData = {
-        time: currentTimeframe as UTCTimestamp,
-        open: currentCandle?.close || newPrice,
-        high: newPrice,
-        low: newPrice,
-        close: newPrice,
-      };
-
-      setCurrentCandle(newCandle);
-      setCandleData(prev => [...prev.slice(-199), newCandle]); // Keep only last 200 candles
       
-      if (candlestickSeriesRef.current) {
-        candlestickSeriesRef.current.update(newCandle);
-      }
-    }
-    
-    // Update price change based on previous candle
-    if (currentCandle) {
-      setPriceChange(newPrice - currentCandle.close);
-    }
+      return updatedCandle;
+    });
   };
 
   // Enhanced real-time price simulation when WebSocket is not connected
   useEffect(() => {
-    // Adjust update frequency based on timeframe
-    const timeframeMinutes = getTimeframeMinutes(selectedTimeframe);
-    const updateInterval = Math.max(500, Math.min(2000, timeframeMinutes * 100)); // Between 500ms and 2s
+    let interval: NodeJS.Timeout;
     
-    const interval = setInterval(() => {
-      if (wsRef.current?.readyState !== WebSocket.OPEN && currentCandle) {
-        // Adjust volatility based on timeframe (longer timeframes = higher volatility)
-        const baseVolatility = 0.003 * Math.sqrt(timeframeMinutes);
-        const randomMultiplier = 1 + (Math.random() * 0.5);
-        const volatility = baseVolatility * randomMultiplier;
-        
-        // Create trending movements occasionally
-        const trendFactor = Math.random() > 0.7 ? (Math.random() > 0.5 ? 1.5 : -1.5) : 1;
-        
-        const randomFactor = (Math.random() - 0.5) * 2 * trendFactor;
-        const changePercent = randomFactor * volatility;
-        const change = currentCandle.close * changePercent;
-        
-        const newPrice = Math.max(0.000001, currentCandle.close + change);
-        updateCurrentPrice(Number(newPrice.toFixed(6)));
-        
-        // Simulate realistic volume changes
-        setVolume(prev => {
-          const volumeChange = Math.floor((Math.random() - 0.5) * 5000);
-          return Math.max(1000, prev + volumeChange);
-        });
-        
-        // Update last update time
-        setLastUpdate(new Date().toLocaleTimeString());
-      }
-    }, updateInterval);
+    const startPriceSimulation = () => {
+      // Adjust update frequency based on timeframe
+      const timeframeMinutes = getTimeframeMinutes(selectedTimeframe);
+      const updateInterval = Math.max(800, Math.min(2000, timeframeMinutes * 100)); // Between 800ms and 2s
+      
+      interval = setInterval(() => {
+        // Check if WebSocket is not connected and simulation is active
+        if (wsRef.current?.readyState !== WebSocket.OPEN && isSimulationActive) {
+          // Get the latest current candle from state
+          setCurrentCandle(prevCandle => {
+            if (!prevCandle) {
+              // If no candle, try to regenerate data
+              const minutes = getTimeframeMinutes(selectedTimeframe);
+              generateInitialData(minutes);
+              return prevCandle;
+            }
+            
+            // Adjust volatility based on timeframe (longer timeframes = higher volatility)
+            const baseVolatility = 0.003 * Math.sqrt(timeframeMinutes);
+            const randomMultiplier = 1 + (Math.random() * 0.5);
+            const volatility = baseVolatility * randomMultiplier;
+            
+            // Create trending movements occasionally
+            const trendFactor = Math.random() > 0.7 ? (Math.random() > 0.5 ? 1.5 : -1.5) : 1;
+            
+            const randomFactor = (Math.random() - 0.5) * 2 * trendFactor;
+            const changePercent = randomFactor * volatility;
+            const change = prevCandle.close * changePercent;
+            
+            const newPrice = Math.max(0.000001, prevCandle.close + change);
+            
+            // Update the price using the function
+            updateCurrentPrice(Number(newPrice.toFixed(6)));
+            
+            // Update volume
+            setVolume(prev => {
+              const volumeChange = Math.floor((Math.random() - 0.5) * 5000);
+              return Math.max(1000, prev + volumeChange);
+            });
+            
+            // Update last update time
+            setLastUpdate(new Date().toLocaleTimeString());
+            
+            return prevCandle; // Return the same candle, updateCurrentPrice will handle the update
+          });
+        }
+      }, updateInterval);
+    };
 
-    return () => clearInterval(interval);
-  }, [currentCandle, selectedTimeframe]);
+    // Start the simulation
+    startPriceSimulation();
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [selectedTimeframe]); // Only depend on selectedTimeframe, not currentCandle
 
   return (
     <div className={`w-full bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 shadow-2xl border border-gray-700 ${className}`}>
@@ -431,15 +468,23 @@ export function TradingViewChart({ symbol, className = '' }: TradingViewChartPro
               <div className={`w-2 h-2 rounded-full ${
                 wsRef.current?.readyState === WebSocket.OPEN 
                   ? 'bg-green-400 animate-pulse' 
-                  : 'bg-red-400'
+                  : isSimulationActive 
+                    ? 'bg-blue-400 animate-pulse'
+                    : 'bg-red-400'
               }`}></div>
               <span className="text-gray-300">Status:</span>
               <span className={`font-medium ${
                 wsRef.current?.readyState === WebSocket.OPEN 
                   ? 'text-green-400' 
-                  : 'text-red-400'
+                  : isSimulationActive
+                    ? 'text-blue-400'
+                    : 'text-red-400'
               }`}>
-                {wsRef.current?.readyState === WebSocket.OPEN ? 'Live' : 'Disconnected'}
+                {wsRef.current?.readyState === WebSocket.OPEN 
+                  ? 'Live' 
+                  : isSimulationActive 
+                    ? 'Simulation' 
+                    : 'Stopped'}
               </span>
             </div>
           </div>
@@ -514,11 +559,25 @@ export function TradingViewChart({ symbol, className = '' }: TradingViewChartPro
             <span>Real-time data from Backpack API</span>
           </div>
           <div className="flex items-center space-x-2">
-            <button className="px-2 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded transition-all">
-              📷 Screenshot
+            <button 
+              onClick={() => setIsSimulationActive(!isSimulationActive)}
+              className={`px-2 py-1 rounded transition-all text-xs ${
+                isSimulationActive 
+                  ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                  : 'bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white'
+              }`}
+            >
+              {isSimulationActive ? '⏸️ Pause' : '▶️ Start'}
             </button>
-            <button className="px-2 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded transition-all">
-              🔗 Share
+            <button 
+              onClick={() => {
+                const minutes = getTimeframeMinutes(selectedTimeframe);
+                generateInitialData(minutes);
+                setLastUpdate('Chart refreshed');
+              }}
+              className="px-2 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded transition-all text-xs"
+            >
+              � Refresh
             </button>
           </div>
         </div>
