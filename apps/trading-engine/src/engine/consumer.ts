@@ -6,9 +6,14 @@ const KAFKA_TOPIC = "backpack-market-updates";
 
 export class TradingEngineConsumer {
   private consumer: KafkaConsumer;
+  private marketDataCallback?: (data: any) => void;
 
   constructor() {
     this.consumer = new KafkaConsumer("trading-engine", "trading-engine-group");
+  }
+
+  setMarketDataCallback(callback: (data: any) => void): void {
+    this.marketDataCallback = callback;
   }
 
   async start(): Promise<void> {
@@ -42,6 +47,19 @@ export class TradingEngineConsumer {
 
           // Check for liquidations
           checkForLiquidations();
+          
+          // Broadcast market data to WebSocket clients
+          if (this.marketDataCallback) {
+            this.marketDataCallback({
+              type: 'market_data',
+              symbol: marketData.symbol,
+              price: marketData.price,
+              bid: marketData.bid,
+              ask: marketData.ask,
+              timestamp: marketData.timestamp,
+              volume: marketData.volume
+            });
+          }
           
           console.log(`[Engine] Processed market data for ${marketData.symbol}: $${marketData.price}`);
         } catch (error) {

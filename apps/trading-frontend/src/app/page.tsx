@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { TradingChart } from '@/components/TradingChart'
+import TradingViewChart from '@/components/TradingViewChart'
 import { TradingPanel } from '@/components/TradingPanel'
 import { PositionsTable } from '@/components/PositionsTable'
 import { PortfolioOverview } from '@/components/PortfolioOverview'
@@ -101,10 +102,8 @@ export default function TradingDashboard() {
         {activeTab === 'trading' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              <TradingChart
-                data={[]}
-                currentPrice={marketData.price}
-                symbol="SOL/USDC"
+              <TradingViewChart
+                symbol="SOL_USDC"
               />
               
               {/* Recent Positions */}

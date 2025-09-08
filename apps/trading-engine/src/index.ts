@@ -1,4 +1,6 @@
 import express from "express";
+import { createServer } from "http";
+import { WebSocketServer } from "ws";
 import { TradingEngineConsumer } from "./engine/consumer";
 import apiRoutes from "./api/routes";
 
@@ -33,8 +35,51 @@ const startTradingEngine = async () => {
 
   app.use('/api/v1', apiRoutes);
 
-  app.listen(PORT, () => {
-    console.log(`Trading Engine API started on port ${PORT}`);
+  // Create HTTP server
+  const server = createServer(app);
+
+  // Create WebSocket server
+  const wss = new WebSocketServer({ server });
+
+  // Store connected clients
+  const clients = new Set();
+
+  wss.on('connection', (ws) => {
+    console.log('New WebSocket client connected');
+    clients.add(ws);
+
+    ws.on('close', () => {
+      console.log('WebSocket client disconnected');
+      clients.delete(ws);
+    });
+
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      clients.delete(ws);
+    });
+
+    // Send initial connection message
+    ws.send(JSON.stringify({
+      type: 'connection',
+      message: 'Connected to Trading Engine WebSocket'
+    }));
+  });
+
+  // Function to broadcast market data to all connected clients
+  const broadcastMarketData = (data: any) => {
+    const message = JSON.stringify(data);
+    clients.forEach((client: any) => {
+      if (client.readyState === 1) { // WebSocket.OPEN
+        client.send(message);
+      }
+    });
+  };
+
+  // Set up consumer to broadcast received market data
+  consumer.setMarketDataCallback(broadcastMarketData);
+
+  server.listen(PORT, () => {
+    console.log(`Trading Engine API and WebSocket server started on port ${PORT}`);
   });
 
   console.log("Trading Engine is running");
@@ -43,6 +88,7 @@ const startTradingEngine = async () => {
   process.on('SIGINT', async () => {
     console.log('Shutting down Trading Engine...');
     await consumer.stop();
+    server.close();
     process.exit(0);
   });
 };
