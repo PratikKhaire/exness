@@ -216,87 +216,75 @@ export function TradingChart({ currentPrice, symbol, className = '' }: TradingCh
           </div>
         )}
 
-        {/* Single Clean Chart */}
-        <div className="w-full" style={{ height: '500px' }}>
+        {/* Chart Container - Fixed to prevent reflection */}
+        <div className="relative w-full bg-[#0a0e27] rounded-lg border border-gray-700" style={{ height: '400px' }}>
           <svg 
             ref={svgRef}
             width="100%" 
             height="100%" 
             viewBox={`0 0 ${chartWidth} ${chartHeight}`} 
-            className="block"
+            preserveAspectRatio="none"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
             style={{ 
               cursor: 'crosshair',
-              overflow: 'visible'
+              display: 'block',
+              width: '100%',
+              height: '100%'
             }}
           >
-            {/* Dark background for professional look */}
-            <rect width={chartWidth} height={chartHeight} fill="#0a0e27" />
+            {/* Single background */}
+            <rect width="100%" height="100%" fill="#0a0e27" />
 
-            {/* Professional grid lines */}
-            {[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9].map((ratio, i) => {
-              const y = padding + ratio * (chartHeight - 2 * padding)
-              return (
-                <line
-                  key={`grid-${i}`}
-                  x1={padding}
-                  y1={y}
-                  x2={chartWidth - padding}
-                  y2={y}
-                  stroke="#1e2139"
-                  strokeWidth="0.5"
-                />
-              )
-            })}
+            {/* Grid lines */}
+            {[0.25, 0.5, 0.75].map((ratio, i) => (
+              <line
+                key={`h-${i}`}
+                x1={padding}
+                y1={padding + ratio * (chartHeight - 2 * padding)}
+                x2={chartWidth - padding}
+                y2={padding + ratio * (chartHeight - 2 * padding)}
+                stroke="#2a2e47"
+                strokeWidth="1"
+                opacity="0.3"
+              />
+            ))}
 
-            {/* Vertical grid lines */}
-            {Array.from({length: 10}).map((_, i) => {
-              const x = padding + (i / 9) * (chartWidth - 2 * padding)
-              return (
-                <line
-                  key={`vgrid-${i}`}
-                  x1={x}
-                  y1={padding}
-                  x2={x}
-                  y2={chartHeight - padding}
-                  stroke="#1e2139"
-                  strokeWidth="0.5"
-                />
-              )
-            })}
+            {[0.25, 0.5, 0.75].map((ratio, i) => (
+              <line
+                key={`v-${i}`}
+                x1={padding + ratio * (chartWidth - 2 * padding)}
+                y1={padding}
+                x2={padding + ratio * (chartWidth - 2 * padding)}
+                y2={chartHeight - padding}
+                stroke="#2a2e47"
+                strokeWidth="1"
+                opacity="0.3"
+              />
+            ))}
 
             {/* Price labels */}
-            {[0.2, 0.4, 0.6, 0.8].map((ratio, i) => {
+            {[0.2, 0.5, 0.8].map((ratio, i) => {
               const y = padding + ratio * (chartHeight - 2 * padding)
               const price = maxPrice - ratio * priceRange
               return (
-                <g key={`price-${i}`}>
-                  <line
-                    x1={padding}
-                    y1={y}
-                    x2={chartWidth - padding}
-                    y2={y}
-                    stroke="#2a2e47"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x={chartWidth - padding + 5}
-                    y={y + 4}
-                    fill="#8691a8"
-                    fontSize="11"
-                    fontFamily="monospace"
-                  >
-                    {formatPrice(price)}
-                  </text>
-                </g>
+                <text
+                  key={`price-${i}`}
+                  x={chartWidth - padding + 5}
+                  y={y + 4}
+                  fill="#8691a8"
+                  fontSize="11"
+                  fontFamily="monospace"
+                >
+                  {formatPrice(price)}
+                </text>
               )
             })}
 
-            {/* Professional TradingView-style Candlesticks */}
+            {/* Candlesticks */}
             {candlesticks.map((stick) => (
-              <g key={`stick-${stick.index}`}>
-                {/* Wick (shadow) */}
+              <g key={stick.index}>
+                {/* Wick */}
                 <line
                   x1={stick.x}
                   y1={stick.highY}
@@ -306,86 +294,42 @@ export function TradingChart({ currentPrice, symbol, className = '' }: TradingCh
                   strokeWidth="1"
                 />
                 
-                {/* Candle Body */}
+                {/* Body */}
                 <rect
                   x={stick.x - stick.candleWidth / 2}
                   y={stick.bodyTop}
                   width={stick.candleWidth}
-                  height={stick.bodyHeight}
-                  fill={stick.isGreen ? "#26a69a" : "#ef5350"}
+                  height={Math.max(stick.bodyHeight, 1)}
+                  fill={stick.isGreen ? "none" : "#ef5350"}
                   stroke={stick.isGreen ? "#26a69a" : "#ef5350"}
                   strokeWidth="1"
-                  rx="0"
                 />
-                
-                {/* Hollow candles for bullish (optional, like TradingView) */}
-                {stick.isGreen && stick.bodyHeight > 2 && (
-                  <rect
-                    x={stick.x - stick.candleWidth / 2 + 1}
-                    y={stick.bodyTop + 1}
-                    width={stick.candleWidth - 2}
-                    height={stick.bodyHeight - 2}
-                    fill="#0a0e27"
-                  />
-                )}
               </g>
             ))}
 
-            {/* Current price line - TradingView style */}
-            <g>
-              <line
-                x1={padding}
-                y1={padding + ((maxPrice - currentPrice) / priceRange) * (chartHeight - 2 * padding)}
-                x2={chartWidth - padding}
-                y2={padding + ((maxPrice - currentPrice) / priceRange) * (chartHeight - 2 * padding)}
-                stroke="#2196f3"
-                strokeWidth="1"
-                strokeDasharray="3,3"
-              />
-              <rect
-                x={chartWidth - padding - 50}
-                y={padding + ((maxPrice - currentPrice) / priceRange) * (chartHeight - 2 * padding) - 10}
-                width="50"
-                height="20"
-                fill="#2196f3"
-                rx="2"
-              />
-              <text
-                x={chartWidth - padding - 25}
-                y={padding + ((maxPrice - currentPrice) / priceRange) * (chartHeight - 2 * padding) + 4}
-                fill="white"
-                fontSize="10"
-                fontFamily="monospace"
-                textAnchor="middle"
-              >
-                {formatPrice(currentPrice)}
-              </text>
-            </g>
+            {/* Current price line */}
+            <line
+              x1={padding}
+              y1={padding + ((maxPrice - currentPrice) / priceRange) * (chartHeight - 2 * padding)}
+              x2={chartWidth - padding}
+              y2={padding + ((maxPrice - currentPrice) / priceRange) * (chartHeight - 2 * padding)}
+              stroke="#2196f3"
+              strokeWidth="1"
+              strokeDasharray="3,3"
+            />
 
-            {/* Crosshair - TradingView style */}
+            {/* Crosshair */}
             {hoverData.visible && (
-              <g>
-                <line
-                  x1={hoverData.x}
-                  y1={padding}
-                  x2={hoverData.x}
-                  y2={chartHeight - padding}
-                  stroke="#4a5568"
-                  strokeWidth="1"
-                  strokeDasharray="2,2"
-                  opacity="0.8"
-                />
-                <line
-                  x1={padding}
-                  y1={hoverData.candle ? padding + ((maxPrice - hoverData.candle.close) / priceRange) * (chartHeight - 2 * padding) : 0}
-                  x2={chartWidth - padding}
-                  y2={hoverData.candle ? padding + ((maxPrice - hoverData.candle.close) / priceRange) * (chartHeight - 2 * padding) : 0}
-                  stroke="#4a5568"
-                  strokeWidth="1"
-                  strokeDasharray="2,2"
-                  opacity="0.8"
-                />
-              </g>
+              <line
+                x1={hoverData.x}
+                y1={padding}
+                x2={hoverData.x}
+                y2={chartHeight - padding}
+                stroke="#4a5568"
+                strokeWidth="1"
+                strokeDasharray="2,2"
+                opacity="0.5"
+              />
             )}
           </svg>
         </div>
