@@ -1,5 +1,3 @@
-import { logLevel } from "kafkajs";
-import { CLOSING } from "ws";
 
 export type Order = {
     orderId: string;
