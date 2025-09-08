@@ -24,8 +24,10 @@ exness-turbo-repo/
 │   │       └── 📁 websocket/          # WebSocket client
 │   │           └── client.ts          # Backpack exchange connector
 │   │
-│   └── 📁 exness-backend/             # Original monolith (can be deprecated)
-│       └── src/                       # Legacy code
+│   └── 📁 trading-frontend/           # Next.js frontend application
+│       ├── package.json               # Frontend dependencies
+│       ├── next.config.js             # Next.js configuration
+│       └── src/                       # React components and pages
 │
 ├── 📁 packages/                       # Shared libraries/utilities
 │   ├── 📁 shared-types/               # Common TypeScript types

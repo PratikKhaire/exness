@@ -20,7 +20,7 @@ export function TradingChart({ currentPrice, symbol, className = '' }: TradingCh
   const [hoverData, setHoverData] = useState<HoverData>({ x: 0, candle: null, visible: false })
   const svgRef = useRef<SVGSVGElement>(null)
 
-  // Generate mock candlestick data
+  // Generate clean mock candlestick data - single source only
   const generateCandleData = (count: number, interval: string) => {
     const data: ChartData[] = []
     const now = Date.now()
@@ -34,28 +34,33 @@ export function TradingChart({ currentPrice, symbol, className = '' }: TradingCh
       default: intervalMs = 60000 // 1m
     }
 
+    // Generate clean candlestick data - NO bid/ask duplication
     for (let i = count - 1; i >= 0; i--) {
       const time = now - (i * intervalMs)
-      const basePrice = currentPrice + (Math.random() - 0.5) * (currentPrice * 0.1)
-      const volatility = currentPrice * 0.02
       
+      // Use only the current price as base - no bid/ask confusion
+      const basePrice = currentPrice * (1 + (Math.random() - 0.5) * 0.05) // 5% variance
+      const volatility = basePrice * 0.015 // 1.5% volatility
+      
+      // Single OHLC calculation
       const open = basePrice + (Math.random() - 0.5) * volatility
-      const high = Math.max(open, basePrice + Math.random() * volatility)
-      const low = Math.min(open, basePrice - Math.random() * volatility)
-      const close = low + Math.random() * (high - low)
+      const close = basePrice + (Math.random() - 0.5) * volatility
+      const high = Math.max(open, close) + Math.random() * volatility * 0.5
+      const low = Math.min(open, close) - Math.random() * volatility * 0.5
 
       data.push({
         time,
-        open,
-        high,
-        low,
-        close,
-        volume: Math.floor(Math.random() * 1000000) + 100000,
+        open: Number(open.toFixed(2)),
+        high: Number(high.toFixed(2)),
+        low: Number(low.toFixed(2)),
+        close: Number(close.toFixed(2)),
+        volume: Math.floor(Math.random() * 1000000) + 100000
       })
     }
-    return data
-  }
 
+    return data.sort((a, b) => a.time - b.time)
+  }
+  
   useEffect(() => {
     const count = timeframe === '1d' ? 30 : timeframe === '1h' ? 100 : 200
     setCandleData(generateCandleData(count, timeframe))

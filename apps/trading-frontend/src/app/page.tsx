@@ -10,7 +10,7 @@ import { useMarketData } from '@/hooks/useMarketData'
 import { LoadingSpinner } from '@/components/ui'
 
 export default function TradingDashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'positions' | 'trading'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'positions' | 'trading'>('trading')
   const { state, loading, error, refetch } = useEngineState()
   const { marketData } = useMarketData()
 
@@ -95,23 +95,6 @@ export default function TradingDashboard() {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <PortfolioOverview state={state} loading={loading} />
-            
-            {/* Quick Chart View */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <TradingChart
-                  data={[]}
-                  currentPrice={marketData.price}
-                  symbol="SOL/USDC"
-                />
-              </div>
-              <div>
-                <TradingPanel
-                  currentPrice={marketData.price}
-                  onPositionOpened={handlePositionChange}
-                />
-              </div>
-            </div>
           </div>
         )}
 

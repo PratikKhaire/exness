@@ -30,20 +30,39 @@ export class BackpackWebSocketClient {
       try {
         const rawMessage = JSON.parse(data.toString());
         
+        // Extract price from different possible fields
+        let price = 0;
+        
+        // Check if this is a ticker data message from Backpack
+        if (rawMessage.data && rawMessage.data.c) {
+          // 'c' is the current/last price in Backpack format
+          price = parseFloat(rawMessage.data.c);
+        } else if (rawMessage.data && rawMessage.data.lastPrice) {
+          price = parseFloat(rawMessage.data.lastPrice);
+        } else if (rawMessage.data && rawMessage.data.price) {
+          price = parseFloat(rawMessage.data.price);
+        } else if (rawMessage.lastPrice) {
+          price = parseFloat(rawMessage.lastPrice);
+        } else if (rawMessage.price) {
+          price = parseFloat(rawMessage.price);
+        } else if (rawMessage.currentPrice) {
+          price = parseFloat(rawMessage.currentPrice);
+        }
+        
         // Transform to standardized format
         const marketData: MarketDataMessage = {
           symbol: "SOL_USDC",
-          price: rawMessage.currentPrice || rawMessage.price || 0,
+          price: price,
           timestamp: Date.now(),
-          volume: rawMessage.volume,
-          bid: rawMessage.bid,
-          ask: rawMessage.ask,
+          volume: rawMessage.data?.v || rawMessage.volume,
+          bid: rawMessage.data?.bid || rawMessage.bid,
+          ask: rawMessage.data?.ask || rawMessage.ask,
         };
 
         await this.producer.sendMessage(KAFKA_TOPIC, marketData);
-        console.log(`[MarketData] Sent price update: ${marketData.price} for ${marketData.symbol}`);
+        console.log(`[MarketData] Sent price update: $${marketData.price} for ${marketData.symbol}`);
       } catch (err) {
-        console.error("Failed to parse Backpack message", err);
+        console.error("Failed to parse Backpack message", err, data.toString());
       }
     });
 
