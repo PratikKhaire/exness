@@ -1,3 +1,4 @@
+// Types for market-data-service
 export interface MarketDataMessage {
   symbol: string;
   price: number;
@@ -5,11 +6,4 @@ export interface MarketDataMessage {
   volume?: number;
   bid?: number;
   ask?: number;
-}
-
-export interface KafkaMessage {
-  topic: string;
-  partition?: number;
-  value: any;
-  timestamp?: number;
 }

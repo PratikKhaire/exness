@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { TradingChart } from '@/components/TradingChart'
 import TradingViewChart from '@/components/TradingViewChart'
 import { TradingPanel } from '@/components/TradingPanel'
@@ -9,14 +10,38 @@ import { PortfolioOverview } from '@/components/PortfolioOverview'
 import { useEngineState } from '@/hooks/useEngineState'
 import { useMarketData } from '@/hooks/useMarketData'
 import { LoadingSpinner } from '@/components/ui'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function TradingDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'positions' | 'trading'>('trading')
   const { state, loading, error, refetch } = useEngineState()
   const { marketData } = useMarketData()
+  const { user, logout } = useAuth()
+  const router = useRouter()
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!user) {
+      router.push('/auth')
+    }
+  }, [user, router])
 
   const handlePositionChange = () => {
     refetch()
+  }
+
+  const handleLogout = () => {
+    logout()
+    router.push('/auth')
+  }
+
+  // Show loading if user is not yet loaded
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    )
   }
 
   if (error) {
@@ -63,6 +88,20 @@ export default function TradingDashboard() {
                 </div>
               </div>
               {loading && <LoadingSpinner size="sm" />}
+              
+              {/* User Info and Logout */}
+              <div className="flex items-center space-x-3 border-l border-border pl-4">
+                <div className="text-right">
+                  <div className="text-sm text-muted-foreground">Welcome</div>
+                  <div className="text-sm font-medium text-foreground">{user.email}</div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
           

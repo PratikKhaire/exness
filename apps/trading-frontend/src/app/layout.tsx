@@ -1,4 +1,5 @@
 import '../styles/globals.css'
+import { AuthProvider } from '@/contexts/AuthContext'
 
 export const metadata = {
   title: 'Exness Trading Platform',
@@ -13,7 +14,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-background text-foreground font-sans">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   )

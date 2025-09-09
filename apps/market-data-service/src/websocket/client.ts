@@ -1,6 +1,6 @@
 import { WebSocket } from "ws";
-import { KafkaProducer } from "@repo/kafka-utils";
-import { MarketDataMessage } from "@repo/shared-types";
+import { KafkaProducer } from "../utils/kafka";
+import { MarketDataMessage } from "../types";
 
 const BACKPACK_WS_URL = "wss://ws.backpack.exchange/";
 const KAFKA_TOPIC = "backpack-market-updates";
@@ -30,12 +30,9 @@ export class BackpackWebSocketClient {
       try {
         const rawMessage = JSON.parse(data.toString());
         
-        // Extract price from different possible fields
         let price = 0;
         
-        // Check if this is a ticker data message from Backpack
         if (rawMessage.data && rawMessage.data.c) {
-          // 'c' is the current/last price in Backpack format
           price = parseFloat(rawMessage.data.c);
         } else if (rawMessage.data && rawMessage.data.lastPrice) {
           price = parseFloat(rawMessage.data.lastPrice);
@@ -49,7 +46,6 @@ export class BackpackWebSocketClient {
           price = parseFloat(rawMessage.currentPrice);
         }
         
-        // Transform to standardized format
         const marketData: MarketDataMessage = {
           symbol: "SOL_USDC",
           price: price,

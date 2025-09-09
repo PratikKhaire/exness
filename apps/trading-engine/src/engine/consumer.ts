@@ -1,6 +1,11 @@
-import { KafkaConsumer } from "@repo/kafka-utils";
-import { MarketDataMessage } from "@repo/shared-types";
-import { getOpenPositions, calculateUnrealizedPnL, updatePositionPnL, checkForLiquidations } from "./store";
+import { KafkaConsumer } from "../utils/kafka/consumer";
+import { MarketDataMessage } from "../types";
+import { 
+  getOpenPositions, 
+  updatePositionPnL, 
+  calculateUnrealizedPnL, 
+  checkForLiquidations 
+} from "./store";
 
 const KAFKA_TOPIC = "backpack-market-updates";
 

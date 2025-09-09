@@ -1,4 +1,4 @@
-import { KafkaProducer } from "@repo/kafka-utils";
+import { KafkaProducer } from "./utils/kafka";
 import { BackpackWebSocketClient } from "./websocket/client";
 
 const startMarketDataService = async () => {

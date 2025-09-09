@@ -10,16 +10,15 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "ws": "^8.18.3",
     "dotenv": "^16.4.5",
-    "@repo/kafka-utils": "*",
-    "@repo/shared-types": "*"
+    "kafkajs": "^2.2.4",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@types/ws": "^8.5.10",
+    "@repo/typescript-config": "*",
     "@types/node": "^20.14.2",
+    "@types/ws": "^8.5.10",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.4.5",
-    "@repo/typescript-config": "*"
+    "typescript": "^5.4.5"
   }
 }

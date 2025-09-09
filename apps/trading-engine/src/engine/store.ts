@@ -1,4 +1,4 @@
-import { Order, Position } from "@repo/shared-types";
+import { Order, Position } from "../types";
 
 const openOrders: Record<string, Order> = {};
 const balance: Record<string, number> = {
